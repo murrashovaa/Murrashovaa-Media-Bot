@@ -12,3 +12,6 @@ class TagsState(StatesGroup):
     editing_field = State()
     editing_tags = State()
     waiting_for_cover = State()
+
+class ImageState(StatesGroup):
+    waiting_for_image = State()

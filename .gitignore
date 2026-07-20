@@ -9,6 +9,7 @@ __pycache__/
 # Media files
 storage/temp/
 storage/downloads/
+models/*.pth
 
 # Mac
 .DS_Store

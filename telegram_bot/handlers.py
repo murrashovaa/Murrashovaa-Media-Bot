@@ -19,7 +19,8 @@ from telegram_bot.keyboards import (
 from telegram_bot.states import (
     DownloadMusicState,
     DownloadVideoState,
-    TagsState
+    TagsState,
+    ImageState
 )
 
 from services.downloader_service import (
@@ -34,6 +35,8 @@ from tags.cover import (
     add_cover, 
     extract_cover
 )
+
+from image.remove_background import remove_background
 
 router = Router()
 
@@ -122,12 +125,63 @@ async def tags_start(
 
 # Удаление фона
 
-@router.message(F.text == "✂️ Удалить фон")
-async def remove_background_handler(message: Message):
+@router.message(
+    F.text == "✂️ Удалить фон"
+)
+async def remove_background_handler(
+    message: Message,
+    state: FSMContext
+):
     await message.answer(
         "✂️ Отправьте изображение,\n"
-        "и я удалю фон."
+        "поддерживаются JPG, PNG, WEBP, HEIC"
     )
+    await state.set_state(
+        ImageState.waiting_for_image
+    )
+
+
+# Обработчик картинки
+
+@router.message(
+    ImageState.waiting_for_image,
+    F.photo | F.document
+)
+async def process_background_remove(
+    message: Message,
+    state: FSMContext
+):
+    input_path = (
+        "storage/temp/input_image"
+    )
+    output_path = (
+        "storage/temp/no_background.png"
+    )
+    if message.photo:
+        file_id = message.photo[-1].file_id
+    elif message.document:
+        file_id = message.document.file_id
+    file = await message.bot.get_file(
+        file_id
+    )
+    await message.bot.download_file(
+        file.file_path,
+        input_path
+    )
+    await message.answer(
+        "⏳ Удаляю фон..."
+    )
+    remove_background(
+        input_path,
+        output_path
+    )
+    await message.answer_document(
+        document=FSInputFile(output_path),
+        caption="✅ Готово! Фон удален"
+    )
+    os.remove(input_path)
+    os.remove(output_path)
+    await state.clear()
 
 
 # Обработка ссылки на музыку
