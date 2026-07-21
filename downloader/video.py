@@ -7,9 +7,7 @@ import yt_dlp
 from config.settings import STORAGE_PATH, VIDEO_MAX_HEIGHT
 
 TELEGRAM_UPLOAD_LIMIT = 49 * 1024 * 1024
-SEND_AS_DOCUMENT_THRESHOLD = 45 * 1024 * 1024
 COMPRESSION_PRESETS = (
-    {"height": 1080, "crf": 24, "audio_bitrate": "128k"},
     {"height": 720, "crf": 26, "audio_bitrate": "128k"},
     {"height": 540, "crf": 28, "audio_bitrate": "96k"},
     {"height": 480, "crf": 30, "audio_bitrate": "96k"},
@@ -30,6 +28,11 @@ def download_video(url: str) -> str:
 
     if prepared_path != file_path:
         remove_file(file_path)
+
+    if get_file_size(prepared_path) > TELEGRAM_UPLOAD_LIMIT:
+        compressed_path = compress_until_telegram_limit(prepared_path)
+        remove_file(prepared_path)
+        return compressed_path
 
     return prepared_path
 
@@ -165,10 +168,6 @@ def compress_for_telegram(
 
 def get_file_size(file_path: str) -> int:
     return os.path.getsize(file_path)
-
-
-def should_send_as_document(file_path: str) -> bool:
-    return get_file_size(file_path) > SEND_AS_DOCUMENT_THRESHOLD
 
 
 def get_video_dimensions(file_path: str) -> tuple[int | None, int | None]:
