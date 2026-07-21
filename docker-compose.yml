@@ -8,6 +8,8 @@ services:
     env_file:
       - .env
 
+    network_mode: host
+
     volumes:
       - ./storage/temp:/app/storage/temp
       - ./models:/app/models

@@ -15,8 +15,15 @@ async def main():
     logging.basicConfig(level=logging.INFO)
     cleanup_storage()
 
-    session = AiohttpSession(timeout=120)
-    bot = Bot(token=BOT_TOKEN, session=session)
+    session = AiohttpSession(
+        timeout=120,
+        proxy="socks5://127.0.0.1:1080"
+    )
+
+    bot = Bot(
+        token=BOT_TOKEN,
+        session=session
+    )
 
     dp = Dispatcher()
     dp.include_router(router)
