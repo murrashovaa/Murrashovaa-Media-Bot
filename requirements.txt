@@ -16,6 +16,10 @@ opencv-python==5.0.0.93
 pillow==12.3.0
 pillow_heif==1.4.0
 
+rembg==2.0.77
+onnxruntime==1.27.0
+PyMatting==1.1.15
+
 torch==2.13.0+cpu
 torchvision==0.28.0+cpu
 --extra-index-url https://download.pytorch.org/whl/cpu
