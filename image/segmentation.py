@@ -16,16 +16,41 @@ MODEL_PATH = (
     / "sam_vit_b_01ec64.pth"
 )
 
-DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
+_predictor: SamPredictor | None = None
 
-sam = sam_model_registry["vit_b"](checkpoint=str(MODEL_PATH))
-sam.to(device=DEVICE)
 
-predictor = SamPredictor(sam)
+def get_device() -> str:
+    if torch.cuda.is_available():
+        return "cuda"
+
+    if torch.backends.mps.is_available():
+        return "mps"
+
+    return "cpu"
+
+
+def get_predictor() -> SamPredictor:
+    global _predictor
+
+    if _predictor is not None:
+        return _predictor
+
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(
+            f"Модель Segment Anything не найдена: {MODEL_PATH}"
+        )
+
+    sam = sam_model_registry["vit_b"](checkpoint=str(MODEL_PATH))
+    sam.to(device=get_device())
+    sam.eval()
+
+    _predictor = SamPredictor(sam)
+    return _predictor
 
 
 def generate_mask(image: np.ndarray) -> np.ndarray:
     image = image.astype(np.uint8)
+    predictor = get_predictor()
     predictor.set_image(image)
 
     height, width = image.shape[:2]
@@ -48,10 +73,11 @@ def generate_mask(image: np.ndarray) -> np.ndarray:
     )
     labels = np.ones(len(points), dtype=np.int64)
 
-    masks, scores, _ = predictor.predict(
-        point_coords=points,
-        point_labels=labels,
-        box=box,
-        multimask_output=True,
-    )
+    with torch.inference_mode():
+        masks, scores, _ = predictor.predict(
+            point_coords=points,
+            point_labels=labels,
+            box=box,
+            multimask_output=True,
+        )
     return masks[np.argmax(scores)]
