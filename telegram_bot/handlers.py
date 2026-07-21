@@ -2,11 +2,12 @@ import asyncio
 import os
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramEntityTooLarge
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, CallbackQuery, FSInputFile, Message
 
-from downloader.video import download_video
+from downloader.video import VideoTooLargeError, download_video
 from image.remove_background import remove_background
 from config.settings import STORAGE_PATH
 from services.downloader_service import UnsupportedSourceError, download_audio
@@ -173,6 +174,16 @@ async def download_video_url_handler(
         )
         await message.answer_video(FSInputFile(file_path))
         await status_message.edit_text("✅ Видео успешно отправлено 🎬")
+    except VideoTooLargeError as error:
+        await status_message.edit_text(
+            "❌ Видео слишком большое для отправки через Telegram.\n"
+            f"{error}"
+        )
+    except TelegramEntityTooLarge:
+        await status_message.edit_text(
+            "❌ Telegram не принял файл: видео получилось слишком большим.\n"
+            "Попробуй более короткое видео или ссылку на ролик меньшего размера."
+        )
     except Exception as error:
         await status_message.edit_text(f"❌ Ошибка:\n{error}")
     finally:
