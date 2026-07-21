@@ -18,3 +18,7 @@ class TagsState(StatesGroup):
 
 class ImageState(StatesGroup):
     waiting_for_image = State()
+
+
+class AdminState(StatesGroup):
+    waiting_for_cookies = State()

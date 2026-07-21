@@ -5,6 +5,7 @@ import subprocess
 import yt_dlp
 
 from config.settings import STORAGE_PATH, VIDEO_MAX_HEIGHT
+from downloader.errors import raise_friendly_ytdlp_error
 from downloader.options import add_ytdlp_auth_options
 
 TELEGRAM_UPLOAD_LIMIT = 49 * 1024 * 1024
@@ -47,9 +48,12 @@ def download_best_video(url: str) -> str:
     }
     add_ytdlp_auth_options(options)
 
-    with yt_dlp.YoutubeDL(options) as ydl:
-        info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info)
+    try:
+        with yt_dlp.YoutubeDL(options) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+    except Exception as error:
+        raise_friendly_ytdlp_error(error)
 
     for item in info.get("requested_downloads", []):
         file_path = item.get("filepath")

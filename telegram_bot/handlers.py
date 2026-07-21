@@ -7,13 +7,14 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, CallbackQuery, FSInputFile, Message
 
+from config.settings import ADMIN_IDS, STORAGE_PATH, YTDLP_COOKIES_FILE
+from downloader.errors import YouTubeAuthError
 from downloader.video import (
     VideoTooLargeError,
     download_video,
     get_video_dimensions,
 )
 from image.remove_background import remove_background
-from config.settings import STORAGE_PATH
 from services.downloader_service import UnsupportedSourceError, download_audio
 from tags.cover import add_cover, extract_cover
 from tags.editor import update_metadata
@@ -21,6 +22,7 @@ from tags.formatter import format_metadata
 from tags.parser import read_metadata
 from telegram_bot.keyboards import main_keyboard, tags_keyboard
 from telegram_bot.states import (
+    AdminState,
     DownloadMusicState,
     DownloadVideoState,
     ImageState,
@@ -64,6 +66,24 @@ async def help_handler(message: Message):
 🏷 Редактировать теги
 ✂️ Удалить фон
 """
+    )
+
+
+@router.message(Command("update_cookies"))
+async def start_cookies_update_handler(
+    message: Message,
+    state: FSMContext,
+):
+    if not is_admin(message):
+        await message.answer("❌ Эта команда доступна только владельцу бота.")
+        return
+
+    await state.set_state(AdminState.waiting_for_cookies)
+    await message.answer(
+        "Отправь файл `cookies.txt` документом.\n\n"
+        "Это общий YouTube-доступ для бота. Друзьям ничего отправлять "
+        "и настраивать не нужно.",
+        parse_mode="Markdown",
     )
 
 
@@ -154,6 +174,8 @@ async def download_music_url_handler(
         await status_message.edit_text(f"❌ {error}")
     except ValueError as error:
         await status_message.edit_text(f"❌ Некорректная ссылка:\n{error}")
+    except YouTubeAuthError as error:
+        await send_youtube_auth_error(status_message, message, error)
     except Exception as error:
         await status_message.edit_text(f"❌ Не удалось скачать аудио:\n{error}")
     finally:
@@ -193,6 +215,8 @@ async def download_video_url_handler(
         await status_message.edit_text(
             "❌ Telegram не принял видео даже после подготовки."
         )
+    except YouTubeAuthError as error:
+        await send_youtube_auth_error(status_message, message, error)
     except Exception as error:
         await status_message.edit_text(f"❌ Ошибка:\n{error}")
     finally:
@@ -201,6 +225,44 @@ async def download_video_url_handler(
 
 
 # Теги
+
+
+@router.message(
+    AdminState.waiting_for_cookies,
+    F.document,
+)
+async def save_cookies_handler(
+    message: Message,
+    state: FSMContext,
+):
+    if not is_admin(message):
+        await state.clear()
+        await message.answer("❌ Эта команда доступна только владельцу бота.")
+        return
+
+    file_name = message.document.file_name or ""
+    if not file_name.endswith(".txt"):
+        await message.answer("❌ Нужен именно `.txt` файл cookies.")
+        return
+
+    cookies_path = os.path.expanduser(YTDLP_COOKIES_FILE)
+    cookies_dir = os.path.dirname(cookies_path)
+    if cookies_dir:
+        os.makedirs(cookies_dir, exist_ok=True)
+
+    file = await message.bot.get_file(message.document.file_id)
+    await message.bot.download_file(file.file_path, cookies_path)
+
+    await state.clear()
+    await message.answer(
+        "✅ Cookies обновлены.\n"
+        "Теперь YouTube-ссылки будут использовать этот доступ автоматически."
+    )
+
+
+@router.message(AdminState.waiting_for_cookies)
+async def invalid_cookies_update_handler(message: Message):
+    await message.answer("Отправь cookies как `.txt` файл-документ.")
 
 
 async def send_video_file(
@@ -215,6 +277,41 @@ async def send_video_file(
         height=height,
         supports_streaming=True,
     )
+
+
+async def send_youtube_auth_error(
+    status_message: Message,
+    user_message: Message,
+    error: YouTubeAuthError,
+) -> None:
+    await status_message.edit_text(
+        "❌ YouTube временно не дал скачать этот файл.\n\n"
+        f"{error}\n\n"
+        "Попробуй эту же ссылку позже или отправь другую."
+    )
+    await notify_admin_about_youtube_auth(user_message)
+
+
+async def notify_admin_about_youtube_auth(message: Message) -> None:
+    if not ADMIN_IDS:
+        return
+
+    for admin_id in ADMIN_IDS:
+        await message.bot.send_message(
+            admin_id,
+            "⚠️ YouTube запросил антибот-проверку.\n\n"
+            "Это не проблема устройства пользователя. Нужно обновить общий "
+            "YouTube-доступ бота командой /update_cookies или настроить "
+            "YTDLP_COOKIES_FROM_BROWSER.",
+        )
+
+
+def is_admin(message: Message) -> bool:
+    return bool(
+        message.from_user
+        and message.from_user.id in ADMIN_IDS
+    )
+
 
 @router.message(
     TagsState.waiting_for_audio,

@@ -218,19 +218,44 @@ ffprobe -version
 
 ```env
 BOT_TOKEN=your_telegram_bot_token
+ADMIN_IDS=
 STORAGE_PATH=storage/temp
 STORAGE_CLEANUP_MAX_AGE_HOURS=12
 VIDEO_MAX_HEIGHT=1080
-YTDLP_COOKIES_FILE=
+YTDLP_COOKIES_FILE=storage/cookies/youtube.txt
+YTDLP_COOKIES_FROM_BROWSER=
 ```
 
-Если YouTube пишет `Sign in to confirm you're not a bot`, экспортируй cookies из браузера в формате `cookies.txt` и укажи путь:
+Если YouTube пишет `Sign in to confirm you're not a bot`, это не ошибка телефона пользователя. YouTube проверяет машину, где запущен бот.
+
+Есть два варианта:
+
+```env
+YTDLP_COOKIES_FROM_BROWSER=chrome
+```
+
+или экспортировать cookies из браузера в формате `cookies.txt` и указать путь:
 
 ```env
 YTDLP_COOKIES_FILE=storage/cookies/youtube.txt
 ```
 
 Файл cookies лучше хранить внутри `storage/`, потому что эта папка не попадает в git.
+
+Cookies также можно обновлять прямо через Telegram:
+
+1. Узнать свой Telegram ID.
+2. Добавить его в `.env`:
+
+```env
+ADMIN_IDS=123456789
+```
+
+3. Перезапустить бота.
+4. Отправить команду `/update_cookies`.
+5. Прислать файл `cookies.txt` документом.
+
+После этого все пользователи смогут скачивать YouTube-ссылки с любых устройств. Cookies хранятся только на машине, где запущен бот. Cookies друзей не нужны и не используются.
 
 ---
 

@@ -5,6 +5,7 @@ import shutil
 import yt_dlp
 
 from config.settings import STORAGE_PATH
+from downloader.errors import raise_friendly_ytdlp_error
 from downloader.options import add_ytdlp_auth_options
 
 
@@ -25,9 +26,12 @@ def download_music(url: str) -> str:
     }
     add_ytdlp_auth_options(options)
 
-    with yt_dlp.YoutubeDL(options) as ydl:
-        info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info)
+    try:
+        with yt_dlp.YoutubeDL(options) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+    except Exception as error:
+        raise_friendly_ytdlp_error(error)
 
     file_path = f"{os.path.splitext(filename)[0]}.mp3"
 
