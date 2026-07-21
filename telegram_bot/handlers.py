@@ -9,8 +9,10 @@ from aiogram.types import BufferedInputFile, CallbackQuery, FSInputFile, Message
 
 from downloader.video import (
     VideoTooLargeError,
+    compress_until_telegram_limit,
     download_video,
     get_video_dimensions,
+    should_send_as_document,
 )
 from image.remove_background import remove_background
 from config.settings import STORAGE_PATH
@@ -182,13 +184,7 @@ async def download_video_url_handler(
         await status_message.edit_text(
             "📤 Видео скачано. Отправляю файл..."
         )
-        width, height = get_video_dimensions(file_path)
-        await message.answer_video(
-            FSInputFile(file_path),
-            width=width,
-            height=height,
-            supports_streaming=True,
-        )
+        await send_video_file(message, file_path)
         await status_message.edit_text("✅ Видео успешно отправлено 🎬")
     except VideoTooLargeError as error:
         await status_message.edit_text(
@@ -196,10 +192,25 @@ async def download_video_url_handler(
             f"{error}"
         )
     except TelegramEntityTooLarge:
-        await status_message.edit_text(
-            "❌ Telegram не принял файл: видео получилось слишком большим.\n"
-            "Попробуй более короткое видео или ссылку на ролик меньшего размера."
-        )
+        await status_message.edit_text("⚙️ Файл слишком большой. Сжимаю видео...")
+        try:
+            compressed_path = await asyncio.to_thread(
+                compress_until_telegram_limit,
+                file_path,
+            )
+            remove_file(file_path)
+            file_path = compressed_path
+            await send_video_file(message, file_path)
+            await status_message.edit_text("✅ Видео сжато и успешно отправлено 🎬")
+        except VideoTooLargeError as error:
+            await status_message.edit_text(
+                "❌ Видео слишком большое даже после сжатия.\n"
+                f"{error}"
+            )
+        except TelegramEntityTooLarge:
+            await status_message.edit_text(
+                "❌ Telegram не принял файл даже после сжатия."
+            )
     except Exception as error:
         await status_message.edit_text(f"❌ Ошибка:\n{error}")
     finally:
@@ -208,6 +219,28 @@ async def download_video_url_handler(
 
 
 # Теги
+
+
+async def send_video_file(
+    message: Message,
+    file_path: str,
+) -> None:
+    video_file = FSInputFile(file_path)
+
+    if should_send_as_document(file_path):
+        await message.answer_document(
+            document=video_file,
+            caption="🎬 Видео отправлено файлом, чтобы сохранить качество.",
+        )
+        return
+
+    width, height = get_video_dimensions(file_path)
+    await message.answer_video(
+        video_file,
+        width=width,
+        height=height,
+        supports_streaming=True,
+    )
 
 @router.message(
     TagsState.waiting_for_audio,

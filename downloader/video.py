@@ -4,10 +4,10 @@ import subprocess
 
 import yt_dlp
 
-from config.settings import STORAGE_PATH
+from config.settings import STORAGE_PATH, VIDEO_MAX_HEIGHT
 
 TELEGRAM_UPLOAD_LIMIT = 49 * 1024 * 1024
-BEST_VIDEO_FORMAT = "bestvideo+bestaudio/best"
+SEND_AS_DOCUMENT_THRESHOLD = 45 * 1024 * 1024
 COMPRESSION_PRESETS = (
     {"height": 1080, "crf": 24, "audio_bitrate": "128k"},
     {"height": 720, "crf": 26, "audio_bitrate": "128k"},
@@ -31,17 +31,12 @@ def download_video(url: str) -> str:
     if prepared_path != file_path:
         remove_file(file_path)
 
-    if get_file_size(prepared_path) > TELEGRAM_UPLOAD_LIMIT:
-        compressed_path = compress_until_telegram_limit(prepared_path)
-        remove_file(prepared_path)
-        return compressed_path
-
     return prepared_path
 
 
 def download_best_video(url: str) -> str:
     options = {
-        "format": BEST_VIDEO_FORMAT,
+        "format": get_best_video_format(),
         "outtmpl": f"{STORAGE_PATH}/%(title)s_%(format_id)s.%(ext)s",
         "merge_output_format": "mp4",
         "noplaylist": True,
@@ -62,6 +57,13 @@ def download_best_video(url: str) -> str:
             return file_path
 
     raise FileNotFoundError("Не удалось найти скачанный видеофайл.")
+
+
+def get_best_video_format() -> str:
+    return (
+        f"bv*[height<={VIDEO_MAX_HEIGHT}]+ba/"
+        f"b[height<={VIDEO_MAX_HEIGHT}]/best"
+    )
 
 
 def remux_for_telegram(file_path: str) -> str:
@@ -163,6 +165,10 @@ def compress_for_telegram(
 
 def get_file_size(file_path: str) -> int:
     return os.path.getsize(file_path)
+
+
+def should_send_as_document(file_path: str) -> bool:
+    return get_file_size(file_path) > SEND_AS_DOCUMENT_THRESHOLD
 
 
 def get_video_dimensions(file_path: str) -> tuple[int | None, int | None]:

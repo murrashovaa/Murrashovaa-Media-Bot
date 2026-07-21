@@ -116,7 +116,7 @@ Telegram-слой приложения.
 Скачивание и подготовка медиафайлов.
 
 - `music.py` — скачивает аудио через `yt-dlp` и конвертирует результат в MP3.
-- `video.py` — скачивает видео в максимальном качестве, делает Telegram-friendly remux, а если файл слишком большой, сжимает его ступенями до лимита Telegram Bot API.
+- `video.py` — скачивает видео до заданного максимального разрешения, делает Telegram-friendly remux, а если файл слишком большой, сжимает его ступенями до лимита Telegram Bot API.
 
 ### `services/`
 
@@ -148,7 +148,7 @@ Telegram-слой приложения.
 
 Настройки проекта.
 
-- `settings.py` — загружает `.env` и хранит `BOT_TOKEN`, `STORAGE_PATH`, `STORAGE_CLEANUP_MAX_AGE_HOURS`.
+- `settings.py` — загружает `.env` и хранит `BOT_TOKEN`, `STORAGE_PATH`, `STORAGE_CLEANUP_MAX_AGE_HOURS`, `VIDEO_MAX_HEIGHT`.
 
 ### `models/`
 
@@ -218,6 +218,7 @@ ffprobe -version
 BOT_TOKEN=your_telegram_bot_token
 STORAGE_PATH=storage/temp
 STORAGE_CLEANUP_MAX_AGE_HOURS=12
+VIDEO_MAX_HEIGHT=1080
 ```
 
 ---
