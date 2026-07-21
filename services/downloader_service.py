@@ -15,6 +15,19 @@ SOUNDCLOUD_HOSTS = {
     "on.soundcloud.com",
 }
 
+TIKTOK_HOSTS = {
+    "tiktok.com",
+    "m.tiktok.com",
+    "vm.tiktok.com",
+    "vt.tiktok.com",
+}
+
+INSTAGRAM_HOSTS = {
+    "instagram.com",
+    "www.instagram.com",
+    "m.instagram.com",
+}
+
 
 class UnsupportedSourceError(Exception):
     """Ссылка ведёт на неподдерживаемый источник."""
@@ -46,8 +59,16 @@ def download_audio(url: str) -> tuple[str, str]:
         file_path = download_music(normalized_url)
         return file_path, "SoundCloud"
 
+    if hostname in TIKTOK_HOSTS:
+        file_path = download_music(normalized_url)
+        return file_path, "TikTok"
+
+    if hostname in INSTAGRAM_HOSTS:
+        file_path = download_music(normalized_url)
+        return file_path, "Instagram"
+
     raise UnsupportedSourceError(
-        "Поддерживаются только ссылки YouTube и SoundCloud."
+        "Поддерживаются ссылки YouTube, SoundCloud, TikTok и Instagram."
     )
 
 

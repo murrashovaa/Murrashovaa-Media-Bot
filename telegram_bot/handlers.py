@@ -7,7 +7,11 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, CallbackQuery, FSInputFile, Message
 
-from downloader.video import VideoTooLargeError, download_video
+from downloader.video import (
+    VideoTooLargeError,
+    download_video,
+    get_video_dimensions,
+)
 from image.remove_background import remove_background
 from config.settings import STORAGE_PATH
 from services.downloader_service import UnsupportedSourceError, download_audio
@@ -75,7 +79,9 @@ async def start_music_download_handler(
         "🎵 Отправьте ссылку на музыку\n\n"
         "Поддерживаются:\n"
         "• YouTube\n"
-        "• SoundCloud"
+        "• SoundCloud\n"
+        "• TikTok\n"
+        "• Instagram"
     )
 
 
@@ -125,7 +131,9 @@ async def download_music_url_handler(
     file_path: str | None = None
 
     if not message.text:
-        await message.answer("Отправь ссылку на YouTube или SoundCloud.")
+        await message.answer(
+            "Отправь ссылку на YouTube, SoundCloud, TikTok или Instagram."
+        )
         return
 
     status_message = await message.answer("⏳ Обрабатываю ссылку...")
@@ -165,14 +173,20 @@ async def download_video_url_handler(
 ):
     file_path: str | None = None
     url = message.text.strip()
-    status_message = await message.answer("⏳ Скачиваю видео...")
+    status_message = await message.answer("⏳ Скачиваю и подготавливаю видео...")
 
     try:
         file_path = await asyncio.to_thread(download_video, url)
         await status_message.edit_text(
             "📤 Видео скачано. Отправляю файл..."
         )
-        await message.answer_video(FSInputFile(file_path))
+        width, height = get_video_dimensions(file_path)
+        await message.answer_video(
+            FSInputFile(file_path),
+            width=width,
+            height=height,
+            supports_streaming=True,
+        )
         await status_message.edit_text("✅ Видео успешно отправлено 🎬")
     except VideoTooLargeError as error:
         await status_message.edit_text(
