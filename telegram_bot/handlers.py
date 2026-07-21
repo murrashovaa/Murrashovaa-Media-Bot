@@ -173,7 +173,7 @@ async def download_video_url_handler(
 ):
     file_path: str | None = None
     url = message.text.strip()
-    status_message = await message.answer("⏳ Скачиваю и подготавливаю видео...")
+    status_message = await message.answer("⏳ Скачиваю видео в максимальном качестве...")
 
     try:
         file_path = await asyncio.to_thread(download_video, url)
