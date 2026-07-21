@@ -92,11 +92,6 @@ media_bot/
 ├── services/
 │   └── downloader_service.py
 │
-├── audio/
-│   ├── analyzer.py
-│   ├── converter.py
-│   └── normalize.py
-│
 ├── tags/
 │   ├── parser.py
 │   ├── editor.py
@@ -106,15 +101,10 @@ media_bot/
 ├── image/
 │   └── remove_background.py
 │
-├── database/
-│   ├── database.py
-│   └── users.py
-│
 ├── config/
 │   └── settings.py
 │
 ├── requirements.txt
-├── Dockerfile
 ├── .env
 ├── .gitignore
 └── README.md
@@ -140,11 +130,6 @@ media_bot/
 
 - Pillow
 - rembg
-
-## Работа с данными
-
-- SQLAlchemy
-- PostgreSQL
 
 ## Deployment
 
@@ -221,9 +206,7 @@ ffmpeg -version
 ```env
 BOT_TOKEN=your_telegram_bot_token
 
-DATABASE_URL=sqlite:///database.db
-
-STORAGE_PATH=storage
+STORAGE_PATH=storage/temp
 ```
 
 ---
@@ -364,7 +347,6 @@ Production:
 
 - Docker;
 - сервер;
-- PostgreSQL;
 - CI/CD;
 - мониторинг.
 
