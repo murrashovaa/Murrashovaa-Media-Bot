@@ -5,6 +5,7 @@ import subprocess
 import yt_dlp
 
 from config.settings import STORAGE_PATH, VIDEO_MAX_HEIGHT
+from downloader.options import add_ytdlp_auth_options
 
 TELEGRAM_UPLOAD_LIMIT = 49 * 1024 * 1024
 COMPRESSION_PRESETS = (
@@ -44,6 +45,7 @@ def download_best_video(url: str) -> str:
         "merge_output_format": "mp4",
         "noplaylist": True,
     }
+    add_ytdlp_auth_options(options)
 
     with yt_dlp.YoutubeDL(options) as ydl:
         info = ydl.extract_info(url, download=True)

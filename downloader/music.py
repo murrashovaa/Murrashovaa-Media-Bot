@@ -5,6 +5,7 @@ import shutil
 import yt_dlp
 
 from config.settings import STORAGE_PATH
+from downloader.options import add_ytdlp_auth_options
 
 
 def download_music(url: str) -> str:
@@ -22,6 +23,7 @@ def download_music(url: str) -> str:
         ],
         "noplaylist": True,
     }
+    add_ytdlp_auth_options(options)
 
     with yt_dlp.YoutubeDL(options) as ydl:
         info = ydl.extract_info(url, download=True)

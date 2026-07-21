@@ -69,6 +69,7 @@ media_bot/
 ├── downloader/
 │   ├── __init__.py
 │   ├── music.py
+│   ├── options.py
 │   └── video.py
 ├── image/
 │   ├── mask.py
@@ -115,7 +116,8 @@ Telegram-слой приложения.
 
 Скачивание и подготовка медиафайлов.
 
-- `music.py` — скачивает аудио через `yt-dlp` и конвертирует результат в MP3.
+- `music.py` — скачивает аудио через `yt-dlp`, конвертирует результат в MP3 и называет файл в формате `исполнитель - название`.
+- `options.py` — добавляет общие настройки `yt-dlp`, например cookies для YouTube.
 - `video.py` — скачивает видео до заданного максимального разрешения, делает Telegram-friendly remux, а если файл слишком большой, сжимает его ступенями до лимита Telegram Bot API.
 
 ### `services/`
@@ -148,7 +150,7 @@ Telegram-слой приложения.
 
 Настройки проекта.
 
-- `settings.py` — загружает `.env` и хранит `BOT_TOKEN`, `STORAGE_PATH`, `STORAGE_CLEANUP_MAX_AGE_HOURS`, `VIDEO_MAX_HEIGHT`.
+- `settings.py` — загружает `.env` и хранит `BOT_TOKEN`, `STORAGE_PATH`, `STORAGE_CLEANUP_MAX_AGE_HOURS`, `VIDEO_MAX_HEIGHT`, `YTDLP_COOKIES_FILE`.
 
 ### `models/`
 
@@ -219,7 +221,16 @@ BOT_TOKEN=your_telegram_bot_token
 STORAGE_PATH=storage/temp
 STORAGE_CLEANUP_MAX_AGE_HOURS=12
 VIDEO_MAX_HEIGHT=1080
+YTDLP_COOKIES_FILE=
 ```
+
+Если YouTube пишет `Sign in to confirm you're not a bot`, экспортируй cookies из браузера в формате `cookies.txt` и укажи путь:
+
+```env
+YTDLP_COOKIES_FILE=storage/cookies/youtube.txt
+```
+
+Файл cookies лучше хранить внутри `storage/`, потому что эта папка не попадает в git.
 
 ---
 
