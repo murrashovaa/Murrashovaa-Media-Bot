@@ -86,10 +86,8 @@ media_bot/
 │   └── states.py
 │
 ├── downloader/
-│   ├── youtube.py
-│   ├── soundcloud.py
-│   ├── tiktok.py
-│   └── instagram.py
+│   ├── music.py
+│   └── video.py
 │
 ├── services/
 │   └── downloader_service.py
@@ -111,9 +109,6 @@ media_bot/
 ├── database/
 │   ├── database.py
 │   └── users.py
-│
-├── storage/
-│   └── temp/
 │
 ├── config/
 │   └── settings.py

@@ -1,8 +1,8 @@
 from aiogram.types import (
-    ReplyKeyboardMarkup, 
-    KeyboardButton, 
-    InlineKeyboardMarkup, 
-    InlineKeyboardButton
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
 )
 
 
@@ -10,14 +10,14 @@ main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [
             KeyboardButton(text="🎵 Скачать музыку"),
-            KeyboardButton(text="🎬 Скачать видео")
+            KeyboardButton(text="🎬 Скачать видео"),
         ],
         [
             KeyboardButton(text="🏷 Редактировать теги"),
-            KeyboardButton(text="✂️ Удалить фон")
+            KeyboardButton(text="✂️ Удалить фон"),
         ],
     ],
-    resize_keyboard=True
+    resize_keyboard=True,
 )
 
 tags_keyboard = InlineKeyboardMarkup(
@@ -25,38 +25,38 @@ tags_keyboard = InlineKeyboardMarkup(
         [
             InlineKeyboardButton(
                 text="🎵 Название",
-                callback_data="edit_title"
+                callback_data="edit_title",
             ),
             InlineKeyboardButton(
                 text="👤 Исполнитель",
-                callback_data="edit_artist"
+                callback_data="edit_artist",
             ),
         ],
         [
             InlineKeyboardButton(
                 text="💿 Альбом",
-                callback_data="edit_album"
+                callback_data="edit_album",
             ),
             InlineKeyboardButton(
                 text="📅 Год",
-                callback_data="edit_year"
+                callback_data="edit_year",
             ),
         ],
         [
             InlineKeyboardButton(
                 text="🎸 Жанр",
-                callback_data="edit_genre"
+                callback_data="edit_genre",
             ),
             InlineKeyboardButton(
                 text="🖼 Обложка",
-                callback_data="edit_cover"
+                callback_data="edit_cover",
             ),
         ],
         [
             InlineKeyboardButton(
                 text="✅ Готово",
-                callback_data="finish_tags"
+                callback_data="finish_tags",
             )
-        ]
-    ]
+        ],
+    ],
 )

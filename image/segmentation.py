@@ -1,11 +1,11 @@
 from pathlib import Path
 
-import torch
 import numpy as np
+import torch
 
 from segment_anything import (
+    SamPredictor,
     sam_model_registry,
-    SamPredictor
 )
 
 MODEL_PATH = (
@@ -16,60 +16,42 @@ MODEL_PATH = (
     / "sam_vit_b_01ec64.pth"
 )
 
-if torch.backends.mps.is_available():
-    device = "mps"
-else:
-    device = "cpu"
+DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
 
-sam = sam_model_registry["vit_b"](
-    checkpoint=str(MODEL_PATH)
-)
+sam = sam_model_registry["vit_b"](checkpoint=str(MODEL_PATH))
+sam.to(device=DEVICE)
 
-sam.to(
-    device=device
-)
+predictor = SamPredictor(sam)
 
-predictor = SamPredictor(
-    sam
-)
 
-def generate_mask(image):
-    image = image.astype(
-        np.uint8
-    )
-    predictor.set_image(
-        image
-    )
-    h, w = image.shape[:2]
+def generate_mask(image: np.ndarray) -> np.ndarray:
+    image = image.astype(np.uint8)
+    predictor.set_image(image)
+
+    height, width = image.shape[:2]
     box = np.array(
         [
-            w * 0.1,
-            h * 0.05,
-            w * 0.9,
-            h * 0.95
+            width * 0.1,
+            height * 0.05,
+            width * 0.9,
+            height * 0.95,
         ]
     )
-    points = np.array([
-        [w * 0.5, h * 0.5],
-        [w * 0.35, h * 0.5],
-        [w * 0.65, h * 0.5],
-        [w * 0.5, h * 0.3],
-        [w * 0.5, h * 0.7],
-    ])
-    labels = np.array([
-        1,
-        1,
-        1,
-        1,
-        1
-    ])
-    masks, scores, logits = predictor.predict(
+    points = np.array(
+        [
+            [width * 0.5, height * 0.5],
+            [width * 0.35, height * 0.5],
+            [width * 0.65, height * 0.5],
+            [width * 0.5, height * 0.3],
+            [width * 0.5, height * 0.7],
+        ]
+    )
+    labels = np.ones(len(points), dtype=np.int64)
+
+    masks, scores, _ = predictor.predict(
         point_coords=points,
         point_labels=labels,
         box=box,
-        multimask_output=True
+        multimask_output=True,
     )
-    best_mask = masks[
-        np.argmax(scores)
-    ]
-    return best_mask
+    return masks[np.argmax(scores)]

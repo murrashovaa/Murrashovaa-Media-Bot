@@ -1,7 +1,19 @@
 from urllib.parse import urlparse
 
-from downloader.youtube import download_youtube_audio
-from downloader.soundcloud import download_soundcloud_audio
+from downloader.music import download_music
+
+YOUTUBE_HOSTS = {
+    "youtube.com",
+    "m.youtube.com",
+    "music.youtube.com",
+    "youtu.be",
+}
+
+SOUNDCLOUD_HOSTS = {
+    "soundcloud.com",
+    "m.soundcloud.com",
+    "on.soundcloud.com",
+}
 
 
 class UnsupportedSourceError(Exception):
@@ -21,33 +33,33 @@ def download_audio(url: str) -> tuple[str, str]:
     if not normalized_url:
         raise ValueError("Ссылка не может быть пустой.")
 
-    hostname = urlparse(normalized_url).hostname
+    hostname = get_hostname(normalized_url)
 
     if hostname is None:
         raise ValueError("Не удалось распознать ссылку.")
 
-    hostname = hostname.lower()
-
-    if hostname.startswith("www."):
-        hostname = hostname[4:]
-
-    if hostname in {
-        "youtube.com",
-        "m.youtube.com",
-        "music.youtube.com",
-        "youtu.be",
-    }:
-        file_path = download_youtube_audio(normalized_url)
+    if hostname in YOUTUBE_HOSTS:
+        file_path = download_music(normalized_url)
         return file_path, "YouTube"
 
-    if hostname in {
-        "soundcloud.com",
-        "m.soundcloud.com",
-        "on.soundcloud.com",
-    }:
-        file_path = download_soundcloud_audio(normalized_url)
+    if hostname in SOUNDCLOUD_HOSTS:
+        file_path = download_music(normalized_url)
         return file_path, "SoundCloud"
 
     raise UnsupportedSourceError(
         "Поддерживаются только ссылки YouTube и SoundCloud."
     )
+
+
+def get_hostname(url: str) -> str | None:
+    hostname = urlparse(url).hostname
+
+    if hostname is None:
+        return None
+
+    hostname = hostname.lower()
+
+    if hostname.startswith("www."):
+        return hostname[4:]
+
+    return hostname
