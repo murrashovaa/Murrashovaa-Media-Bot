@@ -1,5 +1,6 @@
 import asyncio
 import os
+from urllib.parse import urlparse
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramEntityTooLarge
@@ -15,6 +16,13 @@ from downloader.video import (
     get_video_dimensions,
 )
 from image.remove_background import remove_background
+from downloader.search import (
+    TrackSearchError,
+    download_search_result,
+    format_track_duration,
+    format_track_size,
+    search_tracks,
+)
 from services.downloader_service import UnsupportedSourceError, download_audio
 from tags.cover import add_cover, extract_cover
 from tags.editor import update_metadata
@@ -96,8 +104,9 @@ async def start_music_download_handler(
 ):
     await state.set_state(DownloadMusicState.waiting_for_url)
     await message.answer(
-        "🎵 Отправьте ссылку на музыку\n\n"
-        "Поддерживаются:\n"
+        "🎵 Отправьте ссылку или название песни\n\n"
+        "По названию сначала ищу на Hitmo, потом в других источниках.\n\n"
+        "Ссылки поддерживаются:\n"
         "• YouTube\n"
         "• SoundCloud\n"
         "• TikTok\n"
@@ -150,18 +159,25 @@ async def download_music_url_handler(
 ):
     file_path: str | None = None
 
-    if not message.text:
+    if not message.text or not message.text.strip():
         await message.answer(
-            "Отправь ссылку на YouTube, SoundCloud, TikTok или Instagram."
+            "Отправь ссылку или название песни."
         )
         return
 
+    query = message.text.strip()
     status_message = await message.answer("⏳ Обрабатываю ссылку...")
+
+    if looks_like_url(query):
+        query = ensure_url_scheme(query)
+    else:
+        await search_music_by_name(message, state, status_message, query)
+        return
 
     try:
         file_path, source = await asyncio.to_thread(
             download_audio,
-            message.text,
+            query,
         )
         await status_message.edit_text(
             f"📤 Аудио скачано с {source}. Отправляю файл..."
@@ -181,6 +197,116 @@ async def download_music_url_handler(
     finally:
         remove_file(file_path)
         await state.clear()
+
+
+@router.message(DownloadMusicState.waiting_for_search_choice)
+async def choose_found_music_handler(
+    message: Message,
+    state: FSMContext,
+):
+    file_path: str | None = None
+
+    if not message.text or not message.text.strip().isdigit():
+        await message.answer("Введите номер трека из списка.")
+        return
+
+    data = await state.get_data()
+    results = data.get("music_search_results") or []
+    choice = int(message.text.strip())
+
+    if choice < 1 or choice > len(results):
+        await message.answer("Такого номера нет в списке.")
+        return
+
+    result = results[choice - 1]
+    status_message = await message.answer("⏳ Скачиваю выбранный трек...")
+
+    try:
+        file_path = await asyncio.to_thread(download_search_result, result)
+        await status_message.edit_text("📤 Трек скачан. Отправляю файл...")
+        await message.answer_audio(
+            audio=FSInputFile(file_path),
+            title=result.get("title"),
+            performer=result.get("artist"),
+        )
+        await status_message.edit_text("✅ Трек успешно отправлен 🎵")
+    except TrackSearchError as error:
+        await status_message.edit_text(f"❌ {error}")
+    except YouTubeAuthError as error:
+        await send_youtube_auth_error(status_message, message, error)
+    except Exception as error:
+        await status_message.edit_text(f"❌ Не удалось отправить трек:\n{error}")
+    finally:
+        remove_file(file_path)
+        await state.clear()
+
+
+async def search_music_by_name(
+    message: Message,
+    state: FSMContext,
+    status_message: Message,
+    query: str,
+) -> None:
+    await status_message.edit_text("🔎 Ищу треки...")
+
+    try:
+        results = await asyncio.to_thread(search_tracks, query)
+    except YouTubeAuthError as error:
+        await send_youtube_auth_error(status_message, message, error)
+        await state.clear()
+        return
+    except Exception as error:
+        await status_message.edit_text(f"❌ Не удалось найти треки:\n{error}")
+        await state.clear()
+        return
+
+    if not results:
+        await status_message.edit_text("❌ Ничего не нашла по этому запросу.")
+        await state.clear()
+        return
+
+    await state.update_data(
+        music_search_results=[result.to_dict() for result in results],
+    )
+    await state.set_state(DownloadMusicState.waiting_for_search_choice)
+    await status_message.edit_text(format_music_search_results(results))
+
+
+def format_music_search_results(results) -> str:
+    lines = ["🎵 Нашла варианты. Отправьте номер трека:\n"]
+
+    for index, result in enumerate(results, start=1):
+        meta = format_track_duration(result.duration)
+        size = format_track_size(result.size)
+        if size:
+            meta = f"{meta}, {size}"
+
+        lines.append(
+            f"{index}. {result.display_name}\n"
+            f"   {result.source} · {meta}"
+        )
+
+    return "\n".join(lines)
+
+
+def is_url(value: str) -> bool:
+    parsed = urlparse(value)
+    return bool(parsed.scheme and parsed.netloc)
+
+
+def looks_like_url(value: str) -> bool:
+    if is_url(value):
+        return True
+
+    parsed = urlparse(f"https://{value}")
+    return "." in parsed.netloc and " " not in parsed.netloc
+
+
+def ensure_url_scheme(value: str) -> str:
+    if is_url(value):
+        return value
+
+    return f"https://{value}"
 
 
 # Видео

@@ -14,10 +14,12 @@ Docker.
 
 ## 🎵 Скачать музыку
 
-Поддерживаемые источники: - YouTube - SoundCloud - TikTok - Instagram
+Поддерживаемые источники: - Hitmo/Hitmos поиск по названию - YouTube -
+SoundCloud - TikTok - Instagram
 
-Функции: - скачивание аудио по ссылке; - конвертация в MP3; - отправка
-файла пользователю; - очистка временных файлов.
+Функции: - поиск песни по названию с нумерованным списком вариантов; -
+скачивание выбранного трека; - скачивание аудио по ссылке; - конвертация в
+MP3; - отправка файла пользователю; - очистка временных файлов.
 
 ## 🎬 Скачать видео
 
@@ -68,6 +70,9 @@ Docker.
     media_bot/
     ├── config/
     ├── downloader/
+    │   ├── music.py
+    │   ├── search.py
+    │   └── video.py
     ├── image/
     ├── services/
     ├── tags/
@@ -86,6 +91,7 @@ Docker.
 -   aiogram 3
 -   Docker
 -   Docker Compose
+-   requests
 -   yt-dlp
 -   FFmpeg
 -   Mutagen
@@ -213,4 +219,4 @@ Xray предоставляет локальный SOCKS5-прокси:
 
 **Murrashovaa**
 
-Media Toolkit Bot --- Telegram-инструмент для работы с медиафайлами.
+Murrashovaa Media Bot - Telegram-инструмент для работы с медиафайлами.
