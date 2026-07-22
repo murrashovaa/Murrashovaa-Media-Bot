@@ -2,319 +2,215 @@
 
 Telegram-бот для скачивания, конвертации и обработки медиафайлов.
 
-Бот умеет скачивать аудио и видео по ссылкам, редактировать MP3-теги, добавлять обложки и удалять фон с изображений прямо внутри Telegram.
+Бот позволяет скачивать аудио и видео, редактировать MP3-метаданные,
+добавлять обложки и удалять фон с изображений прямо внутри Telegram.
+
+Проект поддерживает локальный запуск и развёртывание на сервере через
+Docker.
 
 ---
 
-## Возможности
+# Возможности
 
-### Скачать музыку
+## 🎵 Скачать музыку
 
-Поддерживаемые источники:
+Поддерживаемые источники: - YouTube - SoundCloud - TikTok - Instagram
 
-- YouTube
-- SoundCloud
-- TikTok
-- Instagram
+Функции: - скачивание аудио по ссылке; - конвертация в MP3; - отправка
+файла пользователю; - очистка временных файлов.
 
-Что делает:
+## 🎬 Скачать видео
 
-- скачивает аудио по ссылке;
-- конвертирует результат в MP3;
-- отправляет MP3 пользователю;
-- очищает временные файлы после отправки.
+Поддерживаемые источники: - YouTube - TikTok - Instagram
 
-### Скачать видео
+Функции: - скачивание видео; - подготовка MP4 для Telegram; - сохранение
+пропорций; - сжатие больших файлов под лимиты Telegram Bot API.
 
-Поддерживаемые источники:
+## 🏷 Редактирование тегов
 
-- YouTube
-- TikTok
-- Instagram
+Поддерживается: - просмотр ID3-метаданных; - изменение названия,
+исполнителя, альбома, года и жанра; - добавление и замена обложки.
 
-Что делает:
+## ✂️ Удаление фона
 
-- скачивает видео по ссылке;
-- подготавливает MP4 для Telegram;
-- сохраняет пропорции вертикальных и горизонтальных видео;
-- сжимает файл под лимит Telegram Bot API, если видео слишком большое.
+Поддерживаемые форматы: - JPG - PNG - WEBP - HEIC
 
-### Редактировать теги
-
-Поддерживаемые действия:
-
-- просмотр MP3-метаданных;
-- изменение названия, исполнителя, альбома, года и жанра;
-- добавление и замена обложки;
-- отправка обновлённого MP3 обратно в Telegram.
-
-### Удалить фон
-
-Что делает:
-
-- принимает JPG, PNG, WEBP и HEIC;
-- удаляет фон с помощью AI;
-- сохраняет результат в PNG с прозрачностью;
-- дополнительно обрабатывает альфа-канал для более чистых краёв.
+Используется: - rembg; - alpha matting; - Segment Anything как fallback.
 
 ---
 
-## Структура проекта
+# Архитектура
 
-```text
-media_bot/
-├── config/
-│   ├── __init__.py
-│   └── settings.py
-├── downloader/
-│   ├── __init__.py
-│   ├── music.py
-│   ├── options.py
-│   └── video.py
-├── image/
-│   ├── mask.py
-│   ├── remove_background.py
-│   ├── segmentation.py
-│   └── utils.py
-├── models/
-│   └── sam_vit_b_01ec64.pth
-├── services/
-│   ├── __init__.py
-│   └── downloader_service.py
-├── tags/
-│   ├── cover.py
-│   ├── editor.py
-│   ├── formatter.py
-│   ├── metadata.py
-│   └── parser.py
-├── telegram_bot/
-│   ├── __init__.py
-│   ├── bot.py
-│   ├── handlers.py
-│   ├── keyboards.py
-│   └── states.py
-├── .env.example
-├── .gitignore
-├── README.md
-└── requirements.txt
-```
+    Telegram Users
+           |
+           v
+    Telegram Bot (aiogram)
+           |
+           v
+    Docker Container
+           |
+           v
+    Yandex Cloud VM
+           |
+           +----------------+
+           |                |
+           v                v
+       Xray Proxy       Media Processing
+       VLESS Reality    yt-dlp/rembg/SAM
+           |
+           v
+    Telegram API
 
----
+----
 
-## Модули проекта
+# Структура проекта
 
-### `telegram_bot/`
-
-Telegram-слой приложения.
-
-- `bot.py` — точка входа: создаёт `Bot`, `Dispatcher`, подключает роутер и запускает polling.
-- `handlers.py` — основные сценарии бота: команды, кнопки меню, скачивание музыки/видео, редактирование тегов и удаление фона.
-- `keyboards.py` — обычная клавиатура главного меню и inline-кнопки для редактирования тегов.
-- `states.py` — FSM-состояния aiogram для пошаговых сценариев.
-
-### `downloader/`
-
-Скачивание и подготовка медиафайлов.
-
-- `music.py` — скачивает аудио через `yt-dlp`, конвертирует результат в MP3 и называет файл в формате `исполнитель - название`.
-- `options.py` — добавляет общие настройки `yt-dlp`, например cookies для YouTube.
-- `video.py` — скачивает видео до заданного максимального разрешения, делает Telegram-friendly remux, а если файл слишком большой, сжимает его ступенями до лимита Telegram Bot API.
-
-### `services/`
-
-Сервисный слой между Telegram-обработчиками и низкоуровневыми модулями.
-
-- `downloader_service.py` — определяет источник ссылки: YouTube, SoundCloud, TikTok или Instagram, затем вызывает скачивание аудио.
-- `storage_cleanup.py` — при старте бота чистит старые временные файлы в `storage/`, не трогая cache для удаления фона.
-
-### `tags/`
-
-Работа с MP3-метаданными.
-
-- `parser.py` — читает ID3-теги из MP3.
-- `formatter.py` — превращает метаданные в HTML-текст для Telegram.
-- `editor.py` — обновляет текстовые ID3-поля: название, исполнитель, альбом, год и жанр.
-- `cover.py` — добавляет, заменяет и извлекает обложку трека.
-- `metadata.py` — заготовка под будущие общие модели/структуры метаданных.
-
-### `image/`
-
-Обработка изображений.
-
-- `remove_background.py` — основной пайплайн удаления фона: `rembg`, alpha matting, доработка альфа-канала и fallback на SAM.
-- `segmentation.py` — fallback-сегментация через Segment Anything.
-- `mask.py` — постобработка маски: морфология, blur и threshold.
-- `utils.py` — вспомогательные функции подготовки изображений для SAM.
-
-### `config/`
-
-Настройки проекта.
-
-- `settings.py` — загружает `.env` и хранит `BOT_TOKEN`, `STORAGE_PATH`, `STORAGE_CLEANUP_MAX_AGE_HOURS`, `VIDEO_MAX_HEIGHT`, `YTDLP_COOKIES_FILE`.
-
-### `models/`
-
-Локальные AI-модели.
-
-- `sam_vit_b_01ec64.pth` — checkpoint Segment Anything для fallback-удаления фона.
-
-### `storage/`
-
-Runtime-папка для временных файлов.
-
-- не хранится в git;
-- создаётся автоматически;
-- используется для скачанных медиа, промежуточных файлов и cache;
-- старые временные файлы чистятся при старте бота.
+    media_bot/
+    ├── config/
+    ├── downloader/
+    ├── image/
+    ├── services/
+    ├── tags/
+    ├── telegram_bot/
+    ├── models/
+    ├── Dockerfile
+    ├── docker-compose.yml
+    ├── requirements.txt
+    └── README.md
 
 ---
 
-## Технологии
+# Технологии
 
-- Python 3.12
-- aiogram 3
-- yt-dlp
-- FFmpeg / ffprobe
-- Mutagen
-- Pillow
-- rembg
-- Segment Anything
+-   Python 3.12
+-   aiogram 3
+-   Docker
+-   Docker Compose
+-   yt-dlp
+-   FFmpeg
+-   Mutagen
+-   Pillow
+-   rembg
+-   Segment Anything
+-   Xray (VLESS Reality)
 
 ---
 
-## Установка
+# Настройка
 
-### 1. Создать виртуальное окружение
+Создать файл `.env`:
 
-```bash
-python3.12 -m venv venv
-source venv/bin/activate
-```
-
-### 2. Установить зависимости
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Установить FFmpeg
-
-macOS:
-
-```bash
-brew install ffmpeg
-```
-
-Проверка:
-
-```bash
-ffmpeg -version
-ffprobe -version
-```
-
-### 4. Настроить переменные окружения
-
-Создать `.env` в корне проекта:
-
-```env
-BOT_TOKEN=your_telegram_bot_token
+``` env
+BOT_TOKEN=your_token
 ADMIN_IDS=
 STORAGE_PATH=storage/temp
 STORAGE_CLEANUP_MAX_AGE_HOURS=12
 VIDEO_MAX_HEIGHT=1080
 YTDLP_COOKIES_FILE=storage/cookies/youtube.txt
-YTDLP_COOKIES_FROM_BROWSER=
 ```
 
-Если YouTube пишет `Sign in to confirm you're not a bot`, это не ошибка телефона пользователя. YouTube проверяет машину, где запущен бот.
-
-Есть два варианта:
-
-```env
-YTDLP_COOKIES_FROM_BROWSER=chrome
-```
-
-или экспортировать cookies из браузера в формате `cookies.txt` и указать путь:
-
-```env
-YTDLP_COOKIES_FILE=storage/cookies/youtube.txt
-```
-
-Файл cookies лучше хранить внутри `storage/`, потому что эта папка не попадает в git.
-
-Cookies также можно обновлять прямо через Telegram:
-
-1. Узнать свой Telegram ID.
-2. Добавить его в `.env`:
-
-```env
-ADMIN_IDS=123456789
-```
-
-3. Перезапустить бота.
-4. Отправить команду `/update_cookies`.
-5. Прислать файл `cookies.txt` документом.
-
-После этого все пользователи смогут скачивать YouTube-ссылки с любых устройств. Cookies хранятся только на машине, где запущен бот. Cookies друзей не нужны и не используются.
+Секреты не хранятся в Git.
 
 ---
 
-## Запуск
+# Локальный запуск
 
-```bash
+Установка зависимостей:
+
+``` bash
+pip install -r requirements.txt
+```
+
+Запуск:
+
+``` bash
 python -m telegram_bot.bot
 ```
 
-После запуска бот будет доступен в Telegram.
-
 ---
 
-## Главное меню
+# Запуск через Docker
 
-```text
-🎵 Скачать музыку     🎬 Скачать видео
+Сборка:
 
-🏷 Редактировать теги ✂️ Удалить фон
+``` bash
+docker build -t media-bot .
+```
+
+Запуск:
+
+``` bash
+docker-compose up -d
+```
+
+Проверка:
+
+``` bash
+docker ps
+```
+
+Логи:
+
+``` bash
+docker logs -f media-bot
+```
+
+Остановка:
+
+``` bash
+docker-compose down
 ```
 
 ---
 
-## Временные файлы
+# Серверный деплой
 
-Бот использует папку `storage/` для временных файлов, скачанных медиа и cache-файлов обработки изображений.
+Проект разворачивается на Linux VM.
 
-Эта папка не коммитится в git. После успешной отправки пользователю временные файлы удаляются обработчиками.
+Используется:
 
-При старте бот дополнительно удаляет старые временные файлы из `storage/`. По умолчанию удаляются файлы старше 12 часов. Cache `numba_cache` не удаляется, потому что он ускоряет удаление фона.
+-   Docker для приложения;
+-   docker-compose для управления контейнером;
+-   systemd для Xray;
+-   VLESS Reality для доступа к Telegram API.
+
+Xray предоставляет локальный SOCKS5-прокси:
+
+    127.0.0.1:1080
+
+Конфигурация Xray не хранится в репозитории.
 
 ---
 
-## Статус
+# Безопасность
+
+В Git не добавляются:
+
+-   `.env`;
+-   Telegram Bot Token;
+-   Xray/VLESS конфигурации;
+-   cookies YouTube;
+-   приватные ключи.
+
+---
+
+# Статус проекта
 
 Готово:
 
-- главное меню Telegram-бота;
-- FSM-сценарии для музыки, видео, тегов и изображений;
-- скачивание аудио из YouTube, SoundCloud, TikTok и Instagram;
-- скачивание видео из YouTube, TikTok и Instagram;
-- нормализация MP4 для Telegram;
-- защита от лимита размера Telegram Bot API;
-- чтение и редактирование ID3-тегов;
-- добавление обложек в MP3;
-- удаление фона с изображений;
-- очистка временных файлов.
-
-В планах:
-
-- улучшить обработку ошибок для приватных/недоступных ссылок;
-- добавить выбор качества видео;
-- добавить Docker/deploy-конфигурацию;
-- добавить тесты для сервисов скачивания и обработки файлов.
+-   Telegram-бот на aiogram;
+-   скачивание аудио и видео;
+-   обработка MP3-тегов;
+-   добавление обложек;
+-   удаление фона изображений;
+-   Docker-развёртывание;
+-   серверный запуск 24/7;
+-   проксирование Telegram API через Xray.
 
 ---
 
-## Автор
+# Автор
 
 **Murrashovaa**
 
-Media Toolkit Bot — Telegram-инструмент для работы с медиафайлами.
+Media Toolkit Bot --- Telegram-инструмент для работы с медиафайлами.
