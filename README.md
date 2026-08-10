@@ -188,6 +188,125 @@ Xray предоставляет локальный SOCKS5-прокси:
 
 ---
 
+# Если бот перестал работать: проверка Xray/VLESS
+
+Если бот внезапно перестал отвечать, но контейнер `media-bot` запущен, одной из причин может быть недоступность VLESS-сервера, через который Xray подключается к Telegram API.
+
+## 1. Проверить контейнер бота
+
+```bash
+docker ps -a
+docker logs --tail 100 media-bot
+```
+
+Если в логах появляются сетевые ошибки (`TelegramNetworkError`, `Request timeout error`, `Connection reset by peer`), проверить Xray.
+
+## 2. Проверить Xray
+
+```bash
+sudo systemctl status xray --no-pager
+```
+
+Если сервис не запущен:
+
+```bash
+sudo systemctl restart xray
+```
+
+## 3. Проверить доступ к Telegram через SOCKS5
+
+```bash
+curl --proxy socks5h://127.0.0.1:1080 -I --max-time 15 https://api.telegram.org
+```
+
+Рабочее соединение обычно возвращает:
+
+```text
+HTTP/2 302
+location: https://core.telegram.org/bots
+```
+
+Если запрос завершается `timeout`, `Connection reset by peer` или другой сетевой ошибкой, проверить VLESS-сервер.
+
+## 4. Посмотреть ошибки Xray
+
+```bash
+sudo journalctl -u xray -n 100 --no-pager -l
+```
+
+Особенно полезны сообщения `i/o timeout`, `network is unreachable`, `connection reset` и `unexpected status`.
+
+## 5. Проверить, какой сервер используется
+
+Systemd запускает Xray с конфигурацией:
+
+```text
+/usr/local/etc/xray/config.json
+```
+
+Проверить адрес, порт и SNI:
+
+```bash
+grep -E '"address"|"port"|"serverName"' /usr/local/etc/xray/config.json
+```
+
+**Важно:** изменение `~/xray-client.json` само по себе не меняет конфигурацию работающего systemd-сервиса. Если VPN-подписка обновилась и адрес сервера изменился, необходимо обновить именно `/usr/local/etc/xray/config.json`.
+
+## 6. Заменить конфигурацию после обновления VPN-сервера
+
+Сначала сохранить резервную копию:
+
+```bash
+sudo cp /usr/local/etc/xray/config.json /usr/local/etc/xray/config.backup.json
+```
+
+Если актуальная конфигурация сохранена в `~/xray-client.json`:
+
+```bash
+sudo cp ~/xray-client.json /usr/local/etc/xray/config.json
+```
+
+Проверить конфигурацию:
+
+```bash
+sudo xray run -test -config /usr/local/etc/xray/config.json
+```
+
+Ожидаемый результат:
+
+```text
+Configuration OK.
+```
+
+Применить изменения:
+
+```bash
+sudo systemctl restart xray
+```
+
+И снова проверить Telegram:
+
+```bash
+curl --proxy socks5h://127.0.0.1:1080 -I --max-time 15 https://api.telegram.org
+```
+
+## 7. Проверить бота
+
+После восстановления Xray aiogram обычно переподключается автоматически. При необходимости:
+
+```bash
+docker restart media-bot
+docker logs --tail 50 -f media-bot
+```
+
+### Важно
+
+Для изменения Xray/VLESS-конфигурации **не требуется пересобирать Docker-образ бота**: Xray работает как отдельный systemd-сервис на VM.
+
+Конфигурации Xray/VLESS содержат секретные параметры подключения и не должны добавляться в Git.
+
+---
+
 # Безопасность
 
 В Git не добавляются:
