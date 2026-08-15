@@ -38,6 +38,8 @@ def download_video(url: str) -> str:
 
     return prepared_path
 
+def is_tiktok_url(url: str) -> bool:
+    return "tiktok.com" in url.lower()
 
 def download_best_video(url: str) -> str:
     options = {
@@ -46,6 +48,10 @@ def download_best_video(url: str) -> str:
         "merge_output_format": "mp4",
         "noplaylist": True,
     }
+
+    if is_tiktok_url(url):
+        options["proxy"] = "socks5://127.0.0.1:1080"
+
     add_ytdlp_auth_options(options)
 
     try:
@@ -66,7 +72,6 @@ def download_best_video(url: str) -> str:
             return file_path
 
     raise FileNotFoundError("Не удалось найти скачанный видеофайл.")
-
 
 def get_best_video_format() -> str:
     return (
