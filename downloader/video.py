@@ -38,8 +38,9 @@ def download_video(url: str) -> str:
 
     return prepared_path
 
-def is_tiktok_url(url: str) -> bool:
-    return "tiktok.com" in url.lower()
+def needs_proxy(url: str) -> bool:
+    url = url.lower()
+    return "tiktok.com" in url or "instagram.com" in url
 
 def download_best_video(url: str) -> str:
     options = {
@@ -47,9 +48,11 @@ def download_best_video(url: str) -> str:
         "outtmpl": f"{STORAGE_PATH}/%(title)s_%(format_id)s.%(ext)s",
         "merge_output_format": "mp4",
         "noplaylist": True,
+        "socket_timeout": 60,
+        "retries": 5,
     }
 
-    if is_tiktok_url(url):
+    if needs_proxy(url):
         options["proxy"] = "socks5://127.0.0.1:1080"
 
     add_ytdlp_auth_options(options)
