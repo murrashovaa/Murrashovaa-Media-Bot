@@ -8,16 +8,19 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     git \
-    nodejs \
+    curl \
+    ca-certificates \
     libgl1 \
     libglib2.0-0 \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 
 RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
-
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir -U "yt-dlp[default]"
 
 COPY . .
 
