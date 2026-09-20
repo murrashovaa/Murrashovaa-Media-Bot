@@ -8,8 +8,12 @@ from config.settings import STORAGE_PATH
 from downloader.errors import raise_friendly_ytdlp_error
 from downloader.options import add_ytdlp_auth_options
 
-def is_soundcloud_url(url: str) -> bool:
-    return "soundcloud.com" in url.lower()
+def needs_proxy(url: str) -> bool:
+    url = url.lower()
+    return (
+        "soundcloud.com" in url
+        or "tiktok.com" in url
+    )
 
 def download_music(url: str) -> str:
     os.makedirs(STORAGE_PATH, exist_ok=True)
@@ -29,7 +33,7 @@ def download_music(url: str) -> str:
         "retries": 5,
     }
 
-    if is_soundcloud_url(url):
+    if needs_proxy(url):
         options["proxy"] = "socks5://127.0.0.1:1080"
 
     add_ytdlp_auth_options(options)
