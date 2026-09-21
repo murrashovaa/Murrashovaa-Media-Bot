@@ -31,6 +31,7 @@ def download_music(url: str) -> str:
         "noplaylist": True,
         "socket_timeout": 60,
         "retries": 5,
+        "js_runtimes": {"node": {}},
     }
 
     if needs_proxy(url):
