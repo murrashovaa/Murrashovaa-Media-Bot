@@ -49,7 +49,8 @@ def download_best_video(url: str) -> str:
         "merge_output_format": "mp4",
         "noplaylist": True,
         "socket_timeout": 60,
-        "retries": 5,
+        "retries": 10,
+        "extractor_retries": 10,
         "js_runtimes": {"node": {}},
     }
 
